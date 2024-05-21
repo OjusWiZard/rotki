@@ -477,6 +477,7 @@ def test_asset_update(
         assets_updater.perform_update(up_to_version=999, conflicts={})
 
     with GlobalDBHandler().conn.read_ctx() as cursor:
+
         assert cursor.execute('SELECT * FROM assets WHERE identifier = "MYBONK"').fetchall() == ([
             ('MYBONK', 'Bonk', 'Y'),
         ] if update_assets else [])

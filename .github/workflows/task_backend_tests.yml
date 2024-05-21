@@ -15,6 +15,8 @@ jobs:
     env:
       CI: true
       TEST_ENVIRONMENT: ${{ inputs.test_environment }}
+      TARGET_BRANCH: ${{ github.base_ref }}
+      SOURCE_BRANCH: ${{ github.head_ref }}
     runs-on: ${{ inputs.os }}
     name: 'Backend tests'
     timeout-minutes: 50
@@ -32,6 +34,16 @@ jobs:
         with:
           repository: rotki/test-caching
           path: test-caching
+        run: |
+          CASSETTES_DIR=$HOME/work/rotki/rotki/test-caching
+          echo $(cd "${CASSETTES_DIR}" && git branch)
+          LATEST_TARGET_COMMIT=$(cd "${CASSETTES_DIR}" && git rev-parse "${TARGET_BRANCH}")
+          branches=$(cd "${CASSETTES_DIR}" && git branch --contains "${LATEST_TARGET_COMMIT}")
+          (for branch in $branches; do
+              [[ $branch =~ $SOURCE_BRANCH ]] && exit;
+          done) &&
+          echo "VCR setup: $SOURCE_BRANCH fully rebased on $TARGET_BRANCH" ||
+          echo "VCR setup: $SOURCE_BRANCH not fully rebased on $TARGET_BRANCH" && exit 1
       - name: Load env
         uses: rotki/action-env@v2
         with:
