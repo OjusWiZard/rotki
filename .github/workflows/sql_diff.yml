@@ -1,0 +1,73 @@
+name: "SQL Diff"
+on:
+  - pull_request_target
+
+jobs:
+  sql-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if any db is modified
+        id: changed-db-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            *.db
+            **/*.db
+
+      - name: Get diff of all changed DBs
+        if: steps.changed-db-files.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-db-files.outputs.all_changed_files }}
+        run: |
+          output_file="sql_diff.md"
+
+          mkdir source
+          for file in $ALL_CHANGED_FILES; do
+            cp $file source
+          done
+
+          git checkout {{github.base_ref}}
+
+          mkdir target
+          for file in $ALL_CHANGED_FILES; do
+            cp $file target
+          done
+
+          for file in `ls source`; do
+            if head -c 16 source/$file | grep -q "SQLite format 3"; then
+                decryption_query=""
+            else
+                decryption_query="PRAGMA key = '123';"
+            fi
+
+            echo "
+                $decryption_query
+                ATTACH DATABASE 'tmp-from.db' AS plaintext KEY '';
+                SELECT sqlcipher_export('plaintext');
+                DETACH DATABASE plaintext;
+            " | sqlcipher target/$file > /dev/null
+
+            echo "
+                $decryption_query
+                ATTACH DATABASE 'tmp-to.db' AS plaintext KEY '';
+                SELECT sqlcipher_export('plaintext');
+                DETACH DATABASE plaintext;
+            " | sqlcipher source/$file > /dev/null
+
+            echo "SQL diff for \`$file\`:" >> $output_file
+            echo "\`\`\`sql" >> $output_file
+            sqldiff --primarykey tmp-from.db tmp-to.db >> $output_file
+            echo "\`\`\`" >> $output_file
+
+            rm tmp-from.db tmp-to.db
+          done
+
+          rm -r source target
+          echo ::set-output name=sql_diff::"`cat sql_diff.md`"
+
+      - uses: exercism/pr-commenter-action@v1.5.0
+        with:
+          template-variables: |
+            {
+              "sql_diff": "${{ steps.changed-db-files.outputs.sql_diff }}",
+            }

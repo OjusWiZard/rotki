@@ -1,0 +1,9 @@
+comment:
+  on-update: recreate
+  header: SQL Diff
+  snippets:
+    - id: any-db-changed
+      files:
+        - '*.db'
+        - '**/*.db'
+      body: "{{sql_diff}}"
