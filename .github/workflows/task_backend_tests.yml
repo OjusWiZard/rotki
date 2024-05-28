@@ -40,10 +40,19 @@ jobs:
           AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           cd $HOME/work/rotki/rotki/test-caching
-          if ! [[ `git branch | grep $SOURCE_BRANCH` ]]; then
-              echo "Branch $SOURCE_BRANCH does not exist on origin. Checking the $AUTHOR's fork..."
-              git remote add author https://github.com/$AUTHOR/test-caching.git
-              git fetch author $SOURCE_BRANCH && git checkout -b $SOURCE_BRANCH author/$SOURCE_BRANCH || exit 0
+          git fetch origin
+          if [[ `git branch --all | grep remotes/origin/$SOURCE_BRANCH` ]]; then
+            echo "Branch $SOURCE_BRANCH exists on origin. Checking it out..."
+            git checkout -b $SOURCE_BRANCH origin/$SOURCE_BRANCH
+          else
+            echo "Branch $SOURCE_BRANCH does not exist on origin. Checking the $AUTHOR's fork..."
+            git remote add author https://github.com/$AUTHOR/test-caching.git
+            git fetch author $SOURCE_BRANCH && git checkout -b $SOURCE_BRANCH author/$SOURCE_BRANCH || exit 0
+
+            if [ "`curl --silent "https://api.github.com/repos/rotki/test-caching/pulls?state=open&head=$AUTHOR:$SOURCE_BRANCH&base=$TARGET_BRANCH" | jq "length"`" == "0" ]; then
+                echo "Found the $SOURCE_BRANCH branch on $AUTHOR's test-caching fork. But no PR found. Aborting."
+                exit 1
+            fi
           fi
 
           [ `git rev-parse remotes/origin/$TARGET_BRANCH` = `git merge-base remotes/origin/$TARGET_BRANCH $SOURCE_BRANCH` ] &&
