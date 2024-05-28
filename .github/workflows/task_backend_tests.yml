@@ -32,23 +32,20 @@ jobs:
       - name: Checkout test caching
         uses: actions/checkout@v4
         with:
-          repository: rotki/test-caching
+          repository: OjusWiZard/test-caching
           path: test-caching
           fetch-depth: 0
       - name: Ensure VCR branch is fully rebased
         env:
           AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
-          if ! curl --write-out "%{http_code}\n" --silent --head https://github.com/$AUTHOR/test-caching/tree/$SOURCE_BRANCH | grep "404" > /dev/null
-          then
-              cd $HOME/work/rotki/rotki/test-caching
-              git remote add author https://github.com/$AUTHOR/test-caching.git
-              git fetch author $SOURCE_BRANCH
-              git checkout -b $SOURCE_BRANCH author/$SOURCE_BRANCH
-              [ `git rev-parse remotes/origin/$TARGET_BRANCH` = `git merge-base remotes/origin/$TARGET_BRANCH $SOURCE_BRANCH` ] &&
-              echo "VCR setup: $SOURCE_BRANCH fully rebased on $TARGET_BRANCH" && exit ||
-              echo "VCR setup: $SOURCE_BRANCH not fully rebased on $TARGET_BRANCH" && exit 1
-          fi
+          cd $HOME/work/rotki/rotki/test-caching
+          git remote add author https://github.com/$AUTHOR/test-caching.git
+          git fetch author $SOURCE_BRANCH && git checkout -b $SOURCE_BRANCH author/$SOURCE_BRANCH || exit 0
+
+          [ `git rev-parse remotes/origin/$TARGET_BRANCH` = `git merge-base remotes/origin/$TARGET_BRANCH $SOURCE_BRANCH` ] &&
+          echo "VCR setup: $SOURCE_BRANCH fully rebased on $TARGET_BRANCH" && exit ||
+          echo "VCR setup: $SOURCE_BRANCH not fully rebased on $TARGET_BRANCH" && exit 1
       - name: Load env
         uses: rotki/action-env@v2
         with:
