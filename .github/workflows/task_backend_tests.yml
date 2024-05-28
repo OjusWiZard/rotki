@@ -36,11 +36,16 @@ jobs:
           path: test-caching
           fetch-depth: 0
       - name: Ensure VCR branch is fully rebased
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
-          cd $HOME/work/rotki/rotki/test-caching
-          if [ `git rev-parse --verify remotes/origin/$SOURCE_BRANCH 2>/dev/null` ]
+          if ! curl --write-out "%{http_code}\n" --silent --head https://github.com/$AUTHOR/test-caching/tree/$SOURCE_BRANCH | grep "404" > /dev/null
           then
-              [ `git rev-parse remotes/origin/$TARGET_BRANCH` = `git merge-base remotes/origin/$TARGET_BRANCH remotes/origin/$SOURCE_BRANCH` ] &&
+              cd $HOME/work/rotki/rotki/test-caching
+              git remote add author https://github.com/$AUTHOR/test-caching.git
+              git fetch author $SOURCE_BRANCH
+              git checkout -b $SOURCE_BRANCH author/$SOURCE_BRANCH
+              [ `git rev-parse remotes/origin/$TARGET_BRANCH` = `git merge-base remotes/origin/$TARGET_BRANCH $SOURCE_BRANCH` ] &&
               echo "VCR setup: $SOURCE_BRANCH fully rebased on $TARGET_BRANCH" && exit ||
               echo "VCR setup: $SOURCE_BRANCH not fully rebased on $TARGET_BRANCH" && exit 1
           fi
@@ -100,7 +105,7 @@ jobs:
             COVERAGE_ARGS=''
           else
             COVERAGE_ARGS='--cov=./'
-          fi          
+          fi
 
           export CASSETTES_DIR=$HOME/work/rotki/rotki/test-caching
 
