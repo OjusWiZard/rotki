@@ -248,6 +248,7 @@ def fixture_vcr_base_dir() -> Path:
     """Determine the base dir for vcr cassettes
     # pytest-deadfixtures ignore
     """
+
     depth_arg = ''  # In local environment we fetch all history to avoid making the local repo a shallow clone  # noqa: E501
     if 'CI' in os.environ:
         current_branch = os.environ.get('GITHUB_HEAD_REF')  # get branch from github actions
