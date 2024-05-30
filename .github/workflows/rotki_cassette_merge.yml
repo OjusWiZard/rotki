@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: cassette-merge
     steps:
-      - uses: OjusWiZard/action-cassette-deck@v2
+      - uses: rotki/action-cassette-deck@v2
         with:
           token: ${{ secrets.MERGE_TOKEN }}
           cassette_repo: test-caching
